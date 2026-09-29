@@ -1,0 +1,40 @@
+{
+  "robot_name": "3D Delta Robot NEMA 23",
+  "kinematics": {
+    "bicep_length": 150.0,
+    "forearm_length": 400.0,
+    "base_radius": 110.0,
+    "platform_radius": 45.0,
+    "phi_angles": [0.0, 120.0, 240.0]
+  },
+  "actuators": {
+    "motor_type": "NEMA 23 (57BYG250C)",
+    "step_angle_deg": 1.8,
+    "microstepping": 16,
+    "gear_ratio": 1.0,
+    "steps_per_rev": 3200,
+    "steps_per_deg": 8.888889,
+    "invert_axis": [false, false, false]
+  },
+  "limits": {
+    "theta_min": -45.0,
+    "theta_max": 85.0,
+    "z_min": -550.0,
+    "z_max": -200.0,
+    "r_max": 240.0
+  },
+  "motion": {
+    "default_feedrate": 100.0,
+    "max_feedrate": 400.0,
+    "joint_feedrate": 45.0,
+    "acceleration": 800.0
+  },
+  "home_position": {
+    "cartesian": [0.0, 0.0, -350.0],
+    "thetas": [4.73, 4.73, 4.73]
+  },
+  "hardware": {
+    "com_port": "AUTO",
+    "baudrate": 115200
+  }
+}

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Delta Robot Controller | NEMA 23 Actuators</title>
+    <meta name="description" content="State-of-the-art 3D Delta Robot Controller with real-time Cartesian Jogging, Joint/Theta Jogging, 3D Digital Twin, and G-Code Generator.">
+    <link rel="stylesheet" href="style.css">
+    <!-- Local Three.js & OrbitControls for 100% offline & fast reliability -->
+    <script src="three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- Top Application Header -->
+    <header class="app-header">
+        <div class="brand-section">
+            <div class="brand-icon">Δ</div>
+            <div>
+                <h1 class="brand-title">3D Delta Robot Controller</h1>
+                <div class="brand-specs">NEMA 23 Actuators • Bicep: 150mm • Forearm: 400mm</div>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div id="connectionBadge" class="status-badge badge-info">SIMULATOR ACTIVE</div>
+        </div>
+
+        <div class="header-actions">
+            <button id="btnResetEstop" class="btn-reset-estop" title="Reset Emergency Fault">Reset E-Stop</button>
+            <button id="btnEstop" class="btn-estop" title="Emergency Stop (Spacebar)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                E-STOP
+            </button>
+            <button id="btnOpenSettings" class="btn-reset-estop" title="Robot Parameters">⚙️ Config</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="app-main">
+
+        <!-- Left Column: Jogging Panels -->
+        <section class="panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 8 12 12 16"></polyline><polyline points="16 12 12 12"></polyline></svg>
+                    Motion Jogger
+                </span>
+                <!-- Tabs -->
+                <div class="tabs-nav">
+                    <button id="tabCartesian" class="tab-btn active">Cartesian (XYZ)</button>
+                    <button id="tabTheta" class="tab-btn">Theta (Joints)</button>
+                </div>
+            </div>
+
+            <div class="panel-body">
+
+                <!-- 1. CARTESIAN JOGGING TAB -->
+                <div id="panelCartesian" class="jog-tab-content">
+                    
+                    <!-- Step Size Selector -->
+                    <div class="step-selector-group">
+                        <span class="step-label">Cartesian Step Size (mm)</span>
+                        <div class="step-buttons">
+                            <button class="step-btn cart-step-btn" data-step="0.1">0.1</button>
+                            <button class="step-btn cart-step-btn" data-step="1">1</button>
+                            <button class="step-btn cart-step-btn" data-step="5">5</button>
+                            <button class="step-btn cart-step-btn active" data-step="10">10</button>
+                            <button class="step-btn cart-step-btn" data-step="25">25</button>
+                            <button class="step-btn cart-step-btn" data-step="50">50</button>
+                        </div>
+                    </div>
+
+                    <!-- XY 2D Virtual D-Pad -->
+                    <div class="dpad-container">
+                        <div class="dpad-cross">
+                            <button id="jogYPlus" class="dpad-btn dpad-up" title="Jog Y+">Y+</button>
+                            <button id="jogXMinus" class="dpad-btn dpad-left" title="Jog X-">X-</button>
+                            <button id="btnHomeCenter" class="dpad-btn dpad-center" title="Center Park">Center</button>
+                            <button id="jogXPlus" class="dpad-btn dpad-right" title="Jog X+">X+</button>
+                            <button id="jogYMinus" class="dpad-btn dpad-down" title="Jog Y-">Y-</button>
+                        </div>
+                    </div>
+
+                    <!-- Z Axis Elevation Buttons -->
+                    <div class="z-controls">
+                        <button id="jogZPlus" class="z-btn" title="Jog Z+ (Upwards)">
+                            <span>▲</span> Z+ (Up)
+                        </button>
+                        <button id="jogZMinus" class="z-btn" title="Jog Z- (Downwards)">
+                            <span>▼</span> Z- (Down)
+                        </button>
+                    </div>
+
+                    <!-- Feedrate Slider -->
+                    <div class="slider-group" style="margin-top: 10px;">
+                        <div class="slider-header">
+                            <span>Jog Feedrate</span>
+                            <span id="feedrateVal" class="slider-val">120 mm/s</span>
+                        </div>
+                        <input id="feedrateSlider" type="range" min="10" max="400" step="10" value="120">
+                    </div>
+
+                    <!-- Direct XYZ Coordinates Input -->
+                    <div class="direct-input-group" style="margin-top: 10px;">
+                        <span class="step-label">Go To Coordinate</span>
+                        <div class="input-row">
+                            <div class="coord-field"><span>X</span><input id="inputX" type="number" step="1" value="0.0"></div>
+                            <div class="coord-field"><span>Y</span><input id="inputY" type="number" step="1" value="0.0"></div>
+                            <div class="coord-field"><span>Z</span><input id="inputZ" type="number" step="1" value="-350.0"></div>
+                            <button id="btnGoCartesian" class="btn-go">MOVE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. THETA / JOINT JOGGING TAB -->
+                <div id="panelTheta" class="jog-tab-content hidden">
+
+                    <!-- Theta Step Size Selector -->
+                    <div class="step-selector-group">
+                        <span class="step-label">Joint Angular Step Size (deg)</span>
+                        <div class="step-buttons">
+                            <button class="step-btn theta-step-btn" data-step="0.5">0.5°</button>
+                            <button class="step-btn theta-step-btn" data-step="1">1°</button>
+                            <button class="step-btn theta-step-btn active" data-step="5">5°</button>
+                            <button class="step-btn theta-step-btn" data-step="10">10°</button>
+                            <button class="step-btn theta-step-btn" data-step="20">20°</button>
+                            <button class="step-btn theta-step-btn" data-step="45">45°</button>
+                        </div>
+                    </div>
+
+                    <!-- Joint 1 Card -->
+                    <div class="joint-card">
+                        <div class="joint-header">
+                            <span class="joint-name">Motor 1 (θ1, 0°)</span>
+                            <span id="valTh1" class="joint-angle-badge">4.7°</span>
+                        </div>
+                        <div class="joint-jog-row">
+                            <button id="th1Minus" class="nudge-btn">-</button>
+                            <input id="sliderTh1" type="range" min="-45" max="85" step="0.5" value="4.7">
+                            <button id="th1Plus" class="nudge-btn">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Joint 2 Card -->
+                    <div class="joint-card">
+                        <div class="joint-header">
+                            <span class="joint-name">Motor 2 (θ2, 120°)</span>
+                            <span id="valTh2" class="joint-angle-badge">4.7°</span>
+                        </div>
+                        <div class="joint-jog-row">
+                            <button id="th2Minus" class="nudge-btn">-</button>
+                            <input id="sliderTh2" type="range" min="-45" max="85" step="0.5" value="4.7">
+                            <button id="th2Plus" class="nudge-btn">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Joint 3 Card -->
+                    <div class="joint-card">
+                        <div class="joint-header">
+                            <span class="joint-name">Motor 3 (θ3, 240°)</span>
+                            <span id="valTh3" class="joint-angle-badge">4.7°</span>
+                        </div>
+                        <div class="joint-jog-row">
+                            <button id="th3Minus" class="nudge-btn">-</button>
+                            <input id="sliderTh3" type="range" min="-45" max="85" step="0.5" value="4.7">
+                            <button id="th3Plus" class="nudge-btn">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Presets & Automated Sequences Section -->
+                <div class="step-selector-group" style="margin-top: 10px;">
+                    <span class="step-label">Automated Routines & Presets</span>
+                    <div class="presets-grid">
+                        <button id="btnHome" class="preset-btn">🏠 Home (G28)</button>
+                        <button id="btnPark" class="preset-btn">🎯 Center Park</button>
+                        <button id="btnCircleDemo" class="preset-btn">⭕ Circle Path</button>
+                        <button id="btnPickPlaceDemo" class="preset-btn">📦 Pick & Place</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Middle Column: 3D Delta Robot Viewport -->
+        <section class="viewport-panel">
+            <div id="viewport3d"></div>
+
+            <!-- View Camera Buttons -->
+            <div class="viewport-overlay-top">
+                <button class="view-btn" data-view="iso">Isometric</button>
+                <button class="view-btn" data-view="top">Top View</button>
+                <button class="view-btn" data-view="front">Front View</button>
+                <button class="view-btn" data-view="side">Side View</button>
+            </div>
+
+            <!-- Workspace & Trail Toggles -->
+            <div class="viewport-overlay-bottom">
+                <label><input type="checkbox" id="toggleWorkspace" checked> Workspace Dome</label>
+                <label><input type="checkbox" id="toggleTrail" checked> Motion Trail</label>
+                <button id="btnClearTrail" class="view-btn" style="padding: 2px 8px;">Clear Trail</button>
+            </div>
+
+            <!-- Limit Warning Banner -->
+            <div id="limitWarning" class="limit-warning-banner hidden">
+                ⚠️ Out of reachable workspace bounds
+            </div>
+        </section>
+
+        <!-- Right Column: Telemetry & Hardware Console -->
+        <section class="panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                    Telemetry & Hardware
+                </span>
+            </div>
+
+            <div class="panel-body">
+                
+                <!-- Cartesian Coordinates Readout -->
+                <div class="readout-card">
+                    <div class="readout-title">Cartesian End Effector (mm)</div>
+                    <div class="readout-grid-3">
+                        <div class="readout-item">
+                            <span class="readout-axis">X AXIS</span>
+                            <span id="dispX" class="readout-val">0.00</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-axis">Y AXIS</span>
+                            <span id="dispY" class="readout-val">0.00</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-axis">Z AXIS</span>
+                            <span id="dispZ" class="readout-val">-350.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Joint Angles Readout -->
+                <div class="readout-card">
+                    <div class="readout-title">NEMA 23 Joint Angles (Degrees)</div>
+                    <div class="readout-grid-3">
+                        <div class="readout-item">
+                            <span class="readout-axis">MOTOR 1</span>
+                            <span id="dispTh1" class="readout-val">4.73°</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-axis">MOTOR 2</span>
+                            <span id="dispTh2" class="readout-val">4.73°</span>
+                        </div>
+                        <div class="readout-item">
+                            <span class="readout-axis">MOTOR 3</span>
+                            <span id="dispTh3" class="readout-val">4.73°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hardware Connection Box -->
+                <div class="readout-card hardware-box">
+                    <div class="readout-title">Hardware Serial Connection</div>
+                    <select id="selectPort" class="select-field">
+                        <option value="WEBSERIAL_DIRECT">⚡ WebSerial USB (Direct Browser)</option>
+                        <option value="SIMULATION">Virtual Simulator Mode</option>
+                    </select>
+                    <div class="connect-row">
+                        <select id="selectBaud" class="select-field">
+                            <option value="115200" selected>115200 baud</option>
+                            <option value="250000">250000 baud</option>
+                            <option value="57600">57600 baud</option>
+                        </select>
+                        <button id="btnConnect" class="btn-primary">Connect</button>
+                    </div>
+                </div>
+
+                <!-- Terminal / G-Code Console -->
+                <div class="terminal-card">
+                    <div class="terminal-header">G-Code Terminal & Telemetry Log</div>
+                    <div id="consoleOutput" class="terminal-logs">
+                        <div class="log-line log-system"><span class="log-time">[Init]</span> <span class="log-tag tag-system">SYSTEM</span> Delta Kinematics Engine Ready (L=150, l=400)</div>
+                    </div>
+                    <div class="terminal-input-row">
+                        <input id="inputGcode" type="text" class="terminal-input" placeholder="Enter G-code (e.g. G1 X20 Y10 Z-360)">
+                        <button id="btnSendGcode" class="btn-send-cmd">SEND</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Configuration Modal -->
+    <div id="modalSettings" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="panel-title">Delta Robot Physical Parameters</h3>
+                <button id="btnCloseSettings" class="btn-reset-estop">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Bicep Arm Length (L in mm):</label>
+                    <input id="cfgBicep" type="number" step="0.5" value="150.0">
+                </div>
+                <div class="form-group">
+                    <label>Forearm Rod Length (l in mm):</label>
+                    <input id="cfgForearm" type="number" step="0.5" value="400.0">
+                </div>
+                <div class="form-group">
+                    <label>Base Motor Shaft Radius (R in mm):</label>
+                    <input id="cfgBaseR" type="number" step="0.5" value="110.0">
+                </div>
+                <div class="form-group">
+                    <label>End Effector Platform Radius (r in mm):</label>
+                    <input id="cfgPlatR" type="number" step="0.5" value="45.0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSaveSettings" class="btn-primary">Save & Apply Parameters</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Scripts -->
+    <script src="kinematics.js"></script>
+    <script src="robot_3d.js"></script>
+    <script src="serial_comm.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
